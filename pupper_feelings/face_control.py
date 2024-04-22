@@ -26,7 +26,7 @@ class JoyListener(Node):
         package_share_directory = get_package_share_directory("pupper_feelings")
         resources_path = os.path.join(package_share_directory, "resources")
         script_path = os.path.join(resources_path, "ascii.sh")
-        script_command = f"sudo {script_path} {resources_path}/{script_args}"
+        script_command = f"{script_path} {resources_path}/{script_args}"
         self.get_logger().info(f"Running script with args: {script_args}")
         try:
             subprocess.run(script_command, shell=True, check=True)
