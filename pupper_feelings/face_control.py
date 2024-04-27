@@ -55,7 +55,7 @@ class JoyListener(Node):
                 + str(ip_addr)
                 + "\t"
                 + str(battery_voltage)
-                + "\t press 'o' to refresh"
+                + "\t press again to refresh"
             )
 
     def regular_eyes_and_info(self):
