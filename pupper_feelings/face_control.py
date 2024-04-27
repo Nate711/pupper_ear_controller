@@ -52,6 +52,7 @@ class JoyListener(Node):
             self.get_logger().info("Waiting for /dev/tty1")
             time.sleep(1)
         self.get_logger().info("Initialized face control")
+        self.regular_eyes_and_info()
 
     def run_on_button(self, new_buttons, button_index, fn):
         if self.prev_buttons[button_index] == 0 and new_buttons[button_index] == 1:
