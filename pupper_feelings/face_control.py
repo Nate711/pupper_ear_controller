@@ -9,6 +9,39 @@ from subprocess import check_output
 import time
 
 
+class Colors:
+    """ANSI color codes"""
+
+    BLACK = "\033[0;30m"
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    BROWN = "\033[0;33m"
+    BLUE = "\033[0;34m"
+    PURPLE = "\033[0;35m"
+    CYAN = "\033[0;36m"
+    LIGHT_GRAY = "\033[0;37m"
+    DARK_GRAY = "\033[1;30m"
+    LIGHT_RED = "\033[1;31m"
+    LIGHT_GREEN = "\033[1;32m"
+    YELLOW = "\033[1;33m"
+    LIGHT_BLUE = "\033[1;34m"
+    LIGHT_PURPLE = "\033[1;35m"
+    LIGHT_CYAN = "\033[1;36m"
+    LIGHT_WHITE = "\033[1;37m"
+    BOLD = "\033[1m"
+    FAINT = "\033[2m"
+    ITALIC = "\033[3m"
+    UNDERLINE = "\033[4m"
+    BLINK = "\033[5m"
+    NEGATIVE = "\033[7m"
+    CROSSED = "\033[9m"
+    END = "\033[0m"
+
+
+CLEAR_SCREEN = "\033[H\033[J"
+HIDE_CURSOR = "\033[?25l"
+
+
 class JoyListener(Node):
     def __init__(self):
         super().__init__("joy_listener")
@@ -42,7 +75,7 @@ class JoyListener(Node):
         except subprocess.CalledProcessError as e:
             self.get_logger().error(f"Failed to execute script: {e}")
 
-    def display_ip_battery_voltage(self):
+    def display_ip_battery_voltage(self, color_code=Colors.BLUE):
         ip_addr = check_output(["hostname", "-I"]).decode("utf-8").strip()
         battery_voltage = (
             check_output(["python3", "/home/pi/utils/check_batt_voltage.py"])
@@ -51,16 +84,37 @@ class JoyListener(Node):
         )
         with open("/dev/tty1", "w") as tty:
             tty.write(
-                "IP address: "
+                color_code
+                + "IP address: "
                 + str(ip_addr)
                 + "\t"
                 + str(battery_voltage)
                 + "\t press again to refresh"
+                + Colors.END
             )
 
+    def display_txt(self, input_file: str, color_code: str):
+        # Read all lines from the input file
+        package_share_directory = get_package_share_directory("pupper_feelings")
+        resources_path = os.path.join(package_share_directory, "resources")
+        filepath = os.path.join(resources_path, input_file)
+
+        with open(filepath, "r") as f:
+            lines = f.readlines()
+        buffer = ""
+        for line in lines:
+            buffer += line  # Accumulate the lines in the buffer
+
+        with open("/dev/tty1", "w") as tty:
+            tty.write(CLEAR_SCREEN)
+            tty.write(color_code)
+            tty.write(buffer)
+            tty.write(Colors.END)
+            tty.write(HIDE_CURSOR)
+
     def regular_eyes_and_info(self):
-        self.run_script("regular_eyes.txt")
-        self.display_ip_battery_voltage()
+        self.display_txt("regular_eyes.txt", color_code=Colors.BLUE)
+        self.display_ip_battery_voltage(color_code=Colors.BLUE)
 
     def joy_callback(self, msg):
         d_pad_x_axis = 6
@@ -82,7 +136,7 @@ class JoyListener(Node):
         self.run_on_button(
             msg.buttons,
             r1_index,
-            lambda: self.run_script("ask.txt"),
+            lambda: self.display_txt("ask.txt", color_code=Colors.LIGHT_PURPLE),
         )
 
         self.run_on_button(msg.buttons, l1_index, self.regular_eyes_and_info)
@@ -90,16 +144,33 @@ class JoyListener(Node):
             msg.axes,
             d_pad_x_axis,
             -1.0,
-            lambda: self.run_script("fancy_eyes_right.txt"),
+            lambda: self.display_txt(
+                "fancy_eyes_right.txt", color_code=Colors.LIGHT_PURPLE
+            ),
         )
         self.run_on_axes_change(
-            msg.axes, d_pad_x_axis, 1.0, lambda: self.run_script("fancy_eyes_left.txt")
+            msg.axes,
+            d_pad_x_axis,
+            1.0,
+            lambda: self.display_txt(
+                "fancy_eyes_left.txt", color_code=Colors.LIGHT_PURPLE
+            ),
         )
         self.run_on_axes_change(
-            msg.axes, d_pad_y_axis, 1.0, lambda: self.run_script("fancy_eyes_up.txt")
+            msg.axes,
+            d_pad_y_axis,
+            1.0,
+            lambda: self.display_txt(
+                "fancy_eyes_up.txt", color_code=Colors.LIGHT_PURPLE
+            ),
         )
         self.run_on_axes_change(
-            msg.axes, d_pad_y_axis, -1.0, lambda: self.run_script("fancy_eyes_down.txt")
+            msg.axes,
+            d_pad_y_axis,
+            -1.0,
+            lambda: self.display_txt(
+                "fancy_eyes_down.txt", color_code=Colors.LIGHT_PURPLE
+            ),
         )
 
         # Update the previous button states
