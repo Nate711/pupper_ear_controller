@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from rclpy.callback_groups import ReentrantCallbackGroup
+import math
 
 
 class JointStateEffortVisualizer(Node):
@@ -49,10 +50,15 @@ class JointStateEffortVisualizer(Node):
         )
 
         self.joint_efforts = {name: 0.0 for name in self.joint_names}
+        self.effort_sumsq = {name: 0.0 for name in self.joint_names}
+        self.num_records = {name: 0 for name in self.joint_names}
 
     def joint_states_callback(self, msg):
         assert len(msg.effort) == 12
-        self.joint_efforts = {name: effort for name, effort in zip(msg.name, msg.effort)}
+        for name, effort in zip(msg.name, msg.effort):
+            self.joint_efforts[name] = effort
+            self.effort_sumsq[name] += effort**2
+            self.num_records[name] += 1
 
     def display_efforts(self):
         max_effort = 2.0
@@ -65,7 +71,11 @@ class JointStateEffortVisualizer(Node):
             effort = self.joint_efforts.get(joint_name, 0.0)
             bar_length = int((effort / max_effort) * 50)  # Normalize and scale to 50 characters
             bar = "=" * bar_length if effort >= 0 else "-" * -bar_length
-            print(f"{joint_name:15}: [{bar:<50}] {effort:.2f}")
+            mean_sumsq = self.effort_sumsq.get(joint_name, 0.0) / self.num_records.get(
+                joint_name, 1
+            )
+            rms = math.sqrt(mean_sumsq)
+            print(f"{joint_name:15}: [{bar:<50}] {effort:.2f} \t(RMS: {rms:.2f})")
 
 
 def main(args=None):
