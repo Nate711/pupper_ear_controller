@@ -25,6 +25,7 @@ setup(
         'console_scripts': [
             "ear_control = pupper_feelings.ear_control:main",
             "face_control = pupper_feelings.face_control:main",
+            "robot_htop = pupper_feelings.robot_htop:main",
         ],
     },
 )
