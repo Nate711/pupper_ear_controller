@@ -23,22 +23,36 @@ class DualShockServoController(Node):
         self.servo_l = Servo(self.servo_l_pin, min_pulse_width=0.000500, max_pulse_width=0.002500)
         self.servo_r = Servo(self.servo_r_pin, min_pulse_width=0.000500, max_pulse_width=0.002500)
 
+        self.get_logger().info(
+            "If getting GPIO errors, install requirements with:\n"
+            "pip uninstall rpi.gpio\n"
+            "sudo apt install python3-rpi-lgpio\n"
+            "sudo rm /usr/lib/python3.*/EXTERNALLY-MANAGED\n"
+            "pip install gpiozero"
+        )
+
     def joy_callback(self, msg):
         l2_value = msg.axes[2]  # L2 trigger value, from -1 to 1
         right_stick_x = msg.axes[3]  # Right stick X-axis
         right_stick_y = msg.axes[4]  # Right stick Y-axis
 
         # Check if L2 is pressed beyond 95% (converted to -0.95 since the range is [-1, 1])
-        if True: # l2_value < -0.95:
+        if True:  # l2_value < -0.95:
             # Calculate left and right ear positions based on right stick Y value +- X value
-            l_position = lin_map(val=(right_stick_y - right_stick_x), in_min=-2, in_max=2, out_min=-1, out_max=1)
-            r_position = lin_map(val=(-right_stick_y - right_stick_x), in_min=-2, in_max=2, out_min=-1, out_max=1)
+            l_position = lin_map(
+                val=(right_stick_y - right_stick_x), in_min=-2, in_max=2, out_min=-1, out_max=1
+            )
+            r_position = lin_map(
+                val=(-right_stick_y - right_stick_x), in_min=-2, in_max=2, out_min=-1, out_max=1
+            )
 
             # Set servo positions using gpiozero
             self.servo_l.value = l_position
             self.servo_r.value = r_position
 
-            self.get_logger().info(f"Ears activated. Set servos to L: {l_position}, R: {r_position}")
+            self.get_logger().info(
+                f"Ears activated. Set servos to L: {l_position}, R: {r_position}"
+            )
         else:
             # If L2 is not pressed enough, reset servo positions to neutral (0 position)
             self.servo_l.value = 0
