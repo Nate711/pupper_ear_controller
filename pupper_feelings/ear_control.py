@@ -1,7 +1,8 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-import pigpio
+from gpiozero import Servo
+from time import sleep
 
 
 def lin_map(val, in_min, in_max, out_min, out_max):
@@ -13,26 +14,36 @@ class DualShockServoController(Node):
     def __init__(self):
         super().__init__("dualshock_servo_controller")
         self.subscription = self.create_subscription(Joy, "/joy", self.joy_callback, 10)
-        self.pi = pigpio.pi()
-        if not self.pi.connected:
-            self.get_logger().error("Failed to connect to pigpiod daemon")
-            self.destroy_node()
 
-        # GPIO pins for the servos
-        self.servo_l = 15
-        self.servo_r = 14
+        # GPIO pins for the servos controlling the ears
+        self.servo_l_pin = 16
+        self.servo_r_pin = 26
+
+        # Initialize Servos with gpiozero
+        self.servo_l = Servo(self.servo_l_pin, min_pulse_width=0.000500, max_pulse_width=0.002500)
+        self.servo_r = Servo(self.servo_r_pin, min_pulse_width=0.000500, max_pulse_width=0.002500)
 
     def joy_callback(self, msg):
-        l2_value = msg.axes[2]  # from -1 to 1
-        r2_value = msg.axes[5]  # from -1 to 1
-        l_pulse = int(lin_map(val=l2_value, in_min=-1, in_max=1, out_min=1000, out_max=2000))
-        r_pulse = int(lin_map(val=r2_value, in_min=-1, in_max=1, out_min=1000, out_max=2000))
+        l2_value = msg.axes[2]  # L2 trigger value, from -1 to 1
+        right_stick_x = msg.axes[3]  # Right stick X-axis
+        right_stick_y = msg.axes[4]  # Right stick Y-axis
 
-        # Set servo pulse widths
-        self.pi.set_servo_pulsewidth(self.servo_l, l_pulse)
-        self.pi.set_servo_pulsewidth(self.servo_r, r_pulse)
+        # Check if L2 is pressed beyond 95% (converted to -0.95 since the range is [-1, 1])
+        if True: # l2_value < -0.95:
+            # Calculate left and right ear positions based on right stick Y value +- X value
+            l_position = lin_map(val=(right_stick_y - right_stick_x), in_min=-2, in_max=2, out_min=-1, out_max=1)
+            r_position = lin_map(val=(-right_stick_y - right_stick_x), in_min=-2, in_max=2, out_min=-1, out_max=1)
 
-        self.get_logger().info(f"Set servos to L: {l_pulse}, R: {r_pulse}")
+            # Set servo positions using gpiozero
+            self.servo_l.value = l_position
+            self.servo_r.value = r_position
+
+            self.get_logger().info(f"Ears activated. Set servos to L: {l_position}, R: {r_position}")
+        else:
+            # If L2 is not pressed enough, reset servo positions to neutral (0 position)
+            self.servo_l.value = 0
+            self.servo_r.value = 0
+            self.get_logger().info(f"Ears deactivated. Servos reset to neutral position.")
 
 
 def main(args=None):
